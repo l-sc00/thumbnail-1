@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 // SVG Arrow Icon
 const ArrowRight = () => (
@@ -65,8 +66,29 @@ const CloseIcon = () => (
   </svg>
 );
 
+// Logout Icon
+const LogoutIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-4 h-4"
+  >
+    <path
+      d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, loading, signOut } = useAuth();
 
   const navLinks = [
     { href: "#features", label: "Features" },
@@ -104,10 +126,39 @@ export const Navbar = () => {
           </div>
 
           {/* Right Button - Desktop */}
-          <div className="hidden md:block">
-            <Button size="sm" className="gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
-              Get Started <ArrowRight />
-            </Button>
+          <div className="hidden md:flex items-center gap-3">
+            {loading ? null : user ? (
+              <>
+                <div className="flex items-center gap-2">
+                  {user.user_metadata?.avatar_url && (
+                    <Image
+                      src={user.user_metadata.avatar_url}
+                      alt="Profile"
+                      width={28}
+                      height={28}
+                      className="w-7 h-7 rounded-full"
+                    />
+                  )}
+                  <span className="text-sm text-gray-300">
+                    {user.user_metadata?.full_name || user.email}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 border-white/20 text-gray-300 hover:text-white hover:bg-white/10"
+                  onClick={signOut}
+                >
+                  로그아웃 <LogoutIcon />
+                </Button>
+              </>
+            ) : (
+              <Link href="/auth">
+                <Button size="sm" className="gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
+                  Get Started <ArrowRight />
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -134,9 +185,22 @@ export const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              <Button size="sm" className="gap-2 w-full mt-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
-                Get Started <ArrowRight />
-              </Button>
+              {loading ? null : user ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 w-full mt-2 border-white/20 text-gray-300 hover:text-white hover:bg-white/10"
+                  onClick={() => { signOut(); setMobileMenuOpen(false); }}
+                >
+                  로그아웃 <LogoutIcon />
+                </Button>
+              ) : (
+                <Link href="/auth" className="w-full">
+                  <Button size="sm" className="gap-2 w-full mt-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
+                    Get Started <ArrowRight />
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         )}

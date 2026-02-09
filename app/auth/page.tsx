@@ -1,0 +1,243 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+
+// Google Icon SVG
+const GoogleIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M18.1713 8.36791H17.5001V8.33333H10.0001V11.6667H14.7096C14.0225 13.6071 12.1763 15 10.0001 15C7.23882 15 5.00007 12.7613 5.00007 10C5.00007 7.23875 7.23882 5 10.0001 5C11.2746 5 12.4342 5.48083 13.3171 6.26625L15.6742 3.90917C14.1859 2.52167 12.1951 1.66667 10.0001 1.66667C5.39798 1.66667 1.66674 5.39792 1.66674 10C1.66674 14.6021 5.39798 18.3333 10.0001 18.3333C14.6022 18.3333 18.3334 14.6021 18.3334 10C18.3334 9.44125 18.2767 8.89583 18.1713 8.36791Z"
+      fill="#FFC107"
+    />
+    <path
+      d="M2.6275 6.12125L5.36542 8.12917C6.10625 6.29501 7.90042 5 10.0004 5C11.2754 5 12.435 5.48083 13.3179 6.26625L15.675 3.90917C14.1867 2.52167 12.1958 1.66667 10.0004 1.66667C6.79917 1.66667 4.02334 3.47375 2.6275 6.12125Z"
+      fill="#FF3D00"
+    />
+    <path
+      d="M10.0001 18.3333C12.1526 18.3333 14.1101 17.5096 15.5876 16.17L13.0084 13.9875C12.1434 14.6454 11.0859 15.0008 10.0001 15C7.83258 15 5.99216 13.6179 5.29883 11.6892L2.58091 13.7829C3.96049 16.4817 6.76133 18.3333 10.0001 18.3333Z"
+      fill="#4CAF50"
+    />
+    <path
+      d="M18.1713 8.36791H17.5001V8.33333H10.0001V11.6667H14.7096C14.3809 12.5902 13.7889 13.3972 13.0067 13.9879L13.0084 13.9871L15.5876 16.1696C15.4042 16.3363 18.3334 14.1667 18.3334 10C18.3334 9.44125 18.2767 8.89583 18.1713 8.36791Z"
+      fill="#1976D2"
+    />
+  </svg>
+);
+
+interface Beam {
+  x: number;
+  y: number;
+  width: number;
+  length: number;
+  angle: number;
+  speed: number;
+  opacity: number;
+  pulse: number;
+  pulseSpeed: number;
+  layer: number;
+}
+
+function createBeam(width: number, height: number, layer: number): Beam {
+  const angle = -35 + Math.random() * 10;
+  const baseSpeed = 0.2 + layer * 0.2;
+  const baseOpacity = 0.08 + layer * 0.05;
+  const baseWidth = 10 + layer * 5;
+  return {
+    x: Math.random() * width,
+    y: Math.random() * height,
+    width: baseWidth,
+    length: height * 2.5,
+    angle,
+    speed: baseSpeed + Math.random() * 0.2,
+    opacity: baseOpacity + Math.random() * 0.1,
+    pulse: Math.random() * Math.PI * 2,
+    pulseSpeed: 0.01 + Math.random() * 0.015,
+    layer,
+  };
+}
+
+export default function AuthPage() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const noiseRef = useRef<HTMLCanvasElement>(null);
+  const beamsRef = useRef<Beam[]>([]);
+  const animationFrameRef = useRef<number>(0);
+  const { user, loading, signInWithGoogle } = useAuth();
+  const router = useRouter();
+
+  // 이미 로그인된 사용자는 홈으로 리다이렉트
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/");
+    }
+  }, [user, loading, router]);
+
+  const LAYERS = 3;
+  const BEAMS_PER_LAYER = 8;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const noiseCanvas = noiseRef.current;
+    if (!canvas || !noiseCanvas) return;
+    const ctx = canvas.getContext("2d");
+    const nCtx = noiseCanvas.getContext("2d");
+    if (!ctx || !nCtx) return;
+
+    const resizeCanvas = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      noiseCanvas.width = window.innerWidth * dpr;
+      noiseCanvas.height = window.innerHeight * dpr;
+      noiseCanvas.style.width = `${window.innerWidth}px`;
+      noiseCanvas.style.height = `${window.innerHeight}px`;
+      nCtx.setTransform(1, 0, 0, 1, 0, 0);
+      nCtx.scale(dpr, dpr);
+
+      beamsRef.current = [];
+      for (let layer = 1; layer <= LAYERS; layer++) {
+        for (let i = 0; i < BEAMS_PER_LAYER; i++) {
+          beamsRef.current.push(createBeam(window.innerWidth, window.innerHeight, layer));
+        }
+      }
+    };
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const generateNoise = () => {
+      const imgData = nCtx.createImageData(noiseCanvas.width, noiseCanvas.height);
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        const v = Math.random() * 255;
+        imgData.data[i] = v;
+        imgData.data[i + 1] = v;
+        imgData.data[i + 2] = v;
+        imgData.data[i + 3] = 12;
+      }
+      nCtx.putImageData(imgData, 0, 0);
+    };
+
+    const drawBeam = (beam: Beam) => {
+      ctx.save();
+      ctx.translate(beam.x, beam.y);
+      ctx.rotate((beam.angle * Math.PI) / 180);
+
+      const pulsingOpacity = Math.min(1, beam.opacity * (0.8 + Math.sin(beam.pulse) * 0.4));
+      const gradient = ctx.createLinearGradient(0, 0, 0, beam.length);
+      gradient.addColorStop(0, `rgba(0,255,255,0)`);
+      gradient.addColorStop(0.2, `rgba(0,255,255,${pulsingOpacity * 0.5})`);
+      gradient.addColorStop(0.5, `rgba(0,255,255,${pulsingOpacity})`);
+      gradient.addColorStop(0.8, `rgba(0,255,255,${pulsingOpacity * 0.5})`);
+      gradient.addColorStop(1, `rgba(0,255,255,0)`);
+
+      ctx.fillStyle = gradient;
+      ctx.filter = `blur(${2 + beam.layer * 2}px)`;
+      ctx.fillRect(-beam.width / 2, 0, beam.width, beam.length);
+      ctx.restore();
+    };
+
+    const animate = () => {
+      if (!canvas || !ctx) return;
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#050505");
+      gradient.addColorStop(1, "#111111");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      beamsRef.current.forEach((beam) => {
+        beam.y -= beam.speed * (beam.layer / LAYERS + 0.5);
+        beam.pulse += beam.pulseSpeed;
+        if (beam.y + beam.length < -50) {
+          beam.y = window.innerHeight + 50;
+          beam.x = Math.random() * window.innerWidth;
+        }
+        drawBeam(beam);
+      });
+
+      generateNoise();
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => {
+      window.removeEventListener("resize", resizeCanvas);
+      cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full min-h-screen overflow-hidden">
+      <canvas ref={noiseRef} className="absolute inset-0 z-0 pointer-events-none" />
+      <canvas ref={canvasRef} className="absolute inset-0 z-10" />
+
+      <div className="relative z-20 flex min-h-screen w-full items-center justify-center px-6">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <Link href="/" className="flex items-center justify-center gap-3 mb-8 hover:opacity-80 transition-opacity">
+            <Image
+              src="/thumb.png"
+              alt="thumbAI Logo"
+              width={40}
+              height={40}
+              className="w-10 h-10"
+            />
+            <span className="text-2xl font-bold text-white">thumbAI</span>
+          </Link>
+
+          {/* Auth Card */}
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-white mb-2">Welcome</h1>
+              <p className="text-gray-400">Sign in to create stunning thumbnails</p>
+            </div>
+
+            {/* Google Sign In Button */}
+            <Button
+              size="lg"
+              className="w-full gap-3 bg-white hover:bg-gray-100 text-gray-900 font-semibold text-base h-12"
+              onClick={signInWithGoogle}
+            >
+              <GoogleIcon />
+              Continue with Google
+            </Button>
+
+            {/* Terms */}
+            <p className="text-xs text-gray-500 text-center mt-6">
+              By continuing, you agree to our{" "}
+              <Link href="#" className="text-cyan-400 hover:text-cyan-300 underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="#" className="text-cyan-400 hover:text-cyan-300 underline">
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
+
+          {/* Back to Home */}
+          <div className="text-center mt-6">
+            <Link href="/" className="text-gray-400 hover:text-white transition-colors text-sm">
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
