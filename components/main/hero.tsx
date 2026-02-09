@@ -206,8 +206,7 @@ export const PremiumHero = () => {
           </h1>
 
           <p className="text-lg md:text-xl leading-relaxed tracking-tight text-gray-300 max-w-2xl text-center">
-            AI가 자동으로 분석하여 클릭을 유도하는 완벽한 유튜브 썸네일을 생성합니다.
-            몇 초 만에 전문가 수준의 썸네일을 만들어보세요.
+            전문가 수준의 썸네일을 간편하게 만들어보세요.
           </p>
 
           <div className="flex flex-row gap-3 flex-wrap justify-center">
