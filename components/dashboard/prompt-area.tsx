@@ -8,6 +8,7 @@ import {
   PromptInputActions,
   PromptInputTextarea,
 } from "@/components/ui/prompt-input";
+import { BorderBeam } from "@/components/ui/border-beam";
 
 // SVG Icons
 const ArrowUpIcon = () => (
@@ -85,6 +86,7 @@ export const PromptArea = () => {
         onSubmit={handleSubmit}
         className="w-full max-w-2xl"
       >
+        <BorderBeam duration={6} size={200} borderWidth={1.5} />
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2 pb-3">
             {files.map((file, index) => (
