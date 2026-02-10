@@ -149,12 +149,16 @@ export default function DashboardPage() {
       window.removeEventListener("resize", resizeCanvas);
       cancelAnimationFrame(animationFrameRef.current);
     };
-  }, []);
+  }, [loading, user]);
 
-  if (loading || !user) return null;
+  if (loading || !user) {
+    return (
+      <div className="relative w-full min-h-screen overflow-hidden bg-[#050505]" />
+    );
+  }
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden">
+    <div className="relative w-full min-h-screen overflow-hidden bg-[#050505]">
       <canvas ref={noiseRef} className="absolute inset-0 z-0 pointer-events-none" />
       <canvas ref={canvasRef} className="absolute inset-0 z-10" />
 
