@@ -101,7 +101,7 @@ export const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo + Text */}
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <Image
               src="/thumb.png"
               alt="thumbAI Logo"
@@ -129,6 +129,11 @@ export const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             {loading ? null : user ? (
               <>
+                <Link href="/dashboard">
+                  <Button size="sm" className="gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
+                    Dashboard <ArrowRight />
+                  </Button>
+                </Link>
                 <div className="flex items-center gap-2">
                   {user.user_metadata?.avatar_url && (
                     <Image
@@ -139,9 +144,6 @@ export const Navbar = () => {
                       className="w-7 h-7 rounded-full"
                     />
                   )}
-                  <span className="text-sm text-gray-300">
-                    {user.user_metadata?.full_name || user.email}
-                  </span>
                 </div>
                 <Button
                   size="sm"
@@ -186,14 +188,21 @@ export const Navbar = () => {
                 </Link>
               ))}
               {loading ? null : user ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-2 w-full mt-2 border-white/20 text-gray-300 hover:text-white hover:bg-white/10"
-                  onClick={() => { signOut(); setMobileMenuOpen(false); }}
-                >
-                  로그아웃 <LogoutIcon />
-                </Button>
+                <>
+                  <Link href="/dashboard" className="w-full" onClick={() => setMobileMenuOpen(false)}>
+                    <Button size="sm" className="gap-2 w-full mt-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
+                      Dashboard <ArrowRight />
+                    </Button>
+                  </Link>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 w-full border-white/20 text-gray-300 hover:text-white hover:bg-white/10"
+                    onClick={() => { signOut(); setMobileMenuOpen(false); }}
+                  >
+                    로그아웃 <LogoutIcon />
+                  </Button>
+                </>
               ) : (
                 <Link href="/auth" className="w-full">
                   <Button size="sm" className="gap-2 w-full mt-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
