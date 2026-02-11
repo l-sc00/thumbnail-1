@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   PromptInput,
@@ -9,6 +11,7 @@ import {
   PromptInputTextarea,
 } from "@/components/ui/prompt-input";
 import { BorderBeam } from "@/components/ui/border-beam";
+import { LoadingSpinner } from "./loading-spinner";
 
 // SVG Icons
 const ArrowUpIcon = () => (
@@ -35,21 +38,91 @@ const CloseIcon = () => (
   </svg>
 );
 
+const DownloadIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M7 10L12 15M12 15L17 10M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const ErrorXIcon = () => (
+  <svg width="120" height="120" viewBox="0 0 24 24" fill="none" className="w-32 h-32">
+    <circle cx="12" cy="12" r="10" stroke="#ef4444" strokeWidth="1.5" />
+    <path d="M15 9L9 15M9 9L15 15" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+interface GeneratedThumbnail {
+  id: string;
+  prompt: string;
+  imageUrl: string;
+  status: string;
+}
+
 export const PromptArea = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [generatedThumbnail, setGeneratedThumbnail] = useState<GeneratedThumbnail | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = () => {
-    if (input.trim() || files.length > 0) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-        setInput("");
-        setFiles([]);
-      }, 2000);
+  const handleSubmit = async () => {
+    if (!input.trim()) return;
+
+    setIsLoading(true);
+    setError(null);
+    setGeneratedThumbnail(null);
+
+    try {
+      // Convert files to base64 if any
+      const images: string[] = [];
+      for (const file of files) {
+        const base64 = await fileToBase64(file);
+        images.push(base64);
+      }
+
+      const response = await fetch("/api/generate-thumbnail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: input,
+          images: images.length > 0 ? images : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate thumbnail");
+      }
+
+      setGeneratedThumbnail(data.thumbnail);
+      setInput("");
+      setFiles([]);
+    } catch (err) {
+      console.error("Generation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate thumbnail");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          // Keep the full data URL (includes MIME type)
+          resolve(reader.result);
+        } else {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,81 +139,189 @@ export const PromptArea = () => {
     }
   };
 
+  const handleDownload = async () => {
+    if (!generatedThumbnail) return;
+
+    try {
+      const response = await fetch(generatedThumbnail.imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `thumbnail-${generatedThumbnail.id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+    }
+  };
+
+  const handleCreateNew = () => {
+    setGeneratedThumbnail(null);
+    setError(null);
+    setInput("");
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6">
-      {/* Title */}
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-          What thumbnail do you want to create?
-        </h1>
-        <p className="text-gray-400 text-lg">
-          Describe your idea and AI will generate it for you
-        </p>
-      </div>
-
-      {/* Prompt Input */}
-      <PromptInput
-        value={input}
-        onValueChange={setInput}
-        isLoading={isLoading}
-        onSubmit={handleSubmit}
-        className="w-full max-w-2xl"
-      >
-        <BorderBeam duration={6} size={200} borderWidth={1.5} />
-        {files.length > 0 && (
-          <div className="flex flex-wrap gap-2 pb-3">
-            {files.map((file, index) => (
-              <div
-                key={index}
-                className="bg-white/10 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-300"
-              >
-                <PaperclipIcon />
-                <span className="max-w-[120px] truncate">{file.name}</span>
-                <button
-                  onClick={() => handleRemoveFile(index)}
-                  className="hover:bg-white/10 rounded-full p-1 transition-colors"
-                >
-                  <CloseIcon />
-                </button>
-              </div>
-            ))}
-          </div>
+      <AnimatePresence mode="wait">
+        {isLoading && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="w-full max-w-4xl"
+          >
+            <LoadingSpinner size={180} text="Generating" />
+          </motion.div>
         )}
 
-        <PromptInputTextarea placeholder="Describe your thumbnail idea..." />
-
-        <PromptInputActions className="flex items-center justify-between gap-2 pt-3">
-          <PromptInputAction tooltip="Attach files">
-            <label
-              htmlFor="file-upload"
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <input
-                ref={uploadInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-                id="file-upload"
-              />
-              <PaperclipIcon />
-            </label>
-          </PromptInputAction>
-
-          <PromptInputAction
-            tooltip={isLoading ? "Stop generation" : "Send message"}
+        {error && !isLoading && (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="w-full max-w-4xl"
           >
-            <Button
-              size="icon"
-              className="h-9 w-9 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white"
-              onClick={handleSubmit}
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+              <ErrorXIcon />
+              <h3 className="text-2xl font-bold text-red-400 mt-6 mb-2">
+                Generation Failed
+              </h3>
+              <p className="text-gray-400 mb-6 max-w-md">{error}</p>
+              <Button
+                onClick={handleCreateNew}
+                className="bg-cyan-500 hover:bg-cyan-600 text-white"
+              >
+                Try Again
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {generatedThumbnail && !isLoading && !error && (
+          <motion.div
+            key="result"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-3xl"
+          >
+            <div className="relative rounded-2xl overflow-hidden bg-white/5 border border-white/10 p-4 mb-6">
+              <Image
+                src={generatedThumbnail.imageUrl}
+                alt={generatedThumbnail.prompt}
+                width={1920}
+                height={1080}
+                className="w-full h-auto rounded-lg"
+                priority
+              />
+            </div>
+            <div className="flex items-center justify-center gap-4">
+              <Button
+                onClick={handleDownload}
+                className="bg-cyan-500 hover:bg-cyan-600 text-white gap-2"
+              >
+                <DownloadIcon />
+                Download
+              </Button>
+              <Button
+                onClick={handleCreateNew}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20"
+              >
+                Create New
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {!isLoading && !error && !generatedThumbnail && (
+          <motion.div
+            key="prompt"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="w-full max-w-2xl"
+          >
+            <div className="mb-8 text-center">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
+                What thumbnail do you want to create?
+              </h1>
+              <p className="text-gray-400 text-lg">
+                Describe your idea and AI will generate it for you
+              </p>
+            </div>
+
+            <PromptInput
+              value={input}
+              onValueChange={setInput}
+              isLoading={isLoading}
+              onSubmit={handleSubmit}
+              className="w-full"
             >
-              {isLoading ? <StopIcon /> : <ArrowUpIcon />}
-            </Button>
-          </PromptInputAction>
-        </PromptInputActions>
-      </PromptInput>
+              <BorderBeam duration={6} size={200} borderWidth={1.5} />
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-2 pb-3">
+                  {files.map((file, index) => (
+                    <div
+                      key={index}
+                      className="bg-white/10 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-300"
+                    >
+                      <PaperclipIcon />
+                      <span className="max-w-[120px] truncate">{file.name}</span>
+                      <button
+                        onClick={() => handleRemoveFile(index)}
+                        className="hover:bg-white/10 rounded-full p-1 transition-colors"
+                      >
+                        <CloseIcon />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <PromptInputTextarea placeholder="Describe your thumbnail idea..." />
+
+              <PromptInputActions className="flex items-center justify-between gap-2 pt-3">
+                <PromptInputAction tooltip="Attach files">
+                  <label
+                    htmlFor="file-upload"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <PaperclipIcon />
+                  </label>
+                </PromptInputAction>
+
+                <PromptInputAction
+                  tooltip={isLoading ? "Stop generation" : "Send message"}
+                >
+                  <Button
+                    size="icon"
+                    className="h-9 w-9 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white"
+                    onClick={handleSubmit}
+                    disabled={isLoading || !input.trim()}
+                  >
+                    {isLoading ? <StopIcon /> : <ArrowUpIcon />}
+                  </Button>
+                </PromptInputAction>
+              </PromptInputActions>
+            </PromptInput>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

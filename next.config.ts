@@ -29,6 +29,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "googleusercontent.com",
       },
+      // Supabase Storage
+      {
+        protocol: "https",
+        hostname: "oddtslrskqezvmbnpwrl.supabase.co",
+      },
     ],
   },
 };

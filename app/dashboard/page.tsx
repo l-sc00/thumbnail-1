@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardNavbar } from "@/components/dashboard/navbar";
 import { PromptArea } from "@/components/dashboard/prompt-area";
+import { ThumbnailSidebar } from "@/components/dashboard/thumbnail-sidebar";
 
 interface Beam {
   x: number;
@@ -163,8 +164,11 @@ export default function DashboardPage() {
       <canvas ref={canvasRef} className="absolute inset-0 z-10" />
 
       <div className="relative z-20">
+        <ThumbnailSidebar />
         <DashboardNavbar />
-        <PromptArea />
+        <div className="lg:pl-80">
+          <PromptArea />
+        </div>
       </div>
     </div>
   );

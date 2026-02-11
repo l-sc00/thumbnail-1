@@ -22,11 +22,11 @@ export const DashboardNavbar = () => {
   }, []);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
+    <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 lg:pl-[336px]">
       <div className="container mx-auto flex items-center justify-between">
         {/* Logo - Floating Button */}
         <Link
-          href="/dashboard"
+          href="/"
           className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all shadow-lg"
         >
           <Image
