@@ -208,7 +208,7 @@ export const ThumbnailSidebar = () => {
                       : "hover:ring-2 hover:ring-white/20"
                   }`}
                 >
-                  <div className="relative aspect-video bg-black/20">
+                  <div className="relative aspect-video bg-gray-900">
                     <Image
                       src={thumbnail.image_url}
                       alt={thumbnail.prompt}

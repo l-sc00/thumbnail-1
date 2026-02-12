@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { enhanceThumbnailPrompt } from "@/lib/thumbnail-system-prompt";
+import sharp from "sharp";
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,7 +68,15 @@ export async function POST(request: NextRequest) {
 
     try {
       // Enhance user prompt for YouTube thumbnail generation
-      const enhancedPrompt = enhanceThumbnailPrompt(prompt);
+      let enhancedPrompt = enhanceThumbnailPrompt(prompt);
+
+      // If multiple images are provided, add composition instructions
+      if (images && images.length > 1) {
+        enhancedPrompt = `Create a YouTube thumbnail by composing and combining the ${images.length} provided images together. ${enhancedPrompt}. Blend and merge these images creatively to create a unified, cohesive thumbnail design. Maintain visual harmony and ensure all important elements from the source images are visible and well-integrated.`;
+      } else if (images && images.length === 1) {
+        enhancedPrompt = `Using the provided reference image as inspiration, ${enhancedPrompt}`;
+      }
+
       console.log("User prompt:", prompt);
       console.log("Enhanced prompt:", enhancedPrompt);
       console.log("Images provided:", images ? images.length : 0);
@@ -139,13 +148,24 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Upload original image to Supabase Storage without resizing
-      // This preserves full quality and avoids any cropping issues
-      console.log("Uploading original image, size:", imageData.length);
+      // Resize to fit within YouTube thumbnail dimensions: 1280x720 (16:9)
+      // Using "inside" to preserve entire image including all text without cropping
+      console.log("Resizing to fit YouTube specs: 1280x720...");
+      const resizedImage = await sharp(imageData)
+        .resize(1280, 720, {
+          fit: "inside",
+          background: { r: 0, g: 0, b: 0, alpha: 1 }
+        })
+        .png({ quality: 95, compressionLevel: 9 })
+        .toBuffer();
+
+      console.log("Image resized. Original size:", imageData.length, "New size:", resizedImage.length);
+
+      // Upload to Supabase Storage
       const fileName = `${user.id}/${thumbnail.id}.png`;
       const { error: uploadError } = await supabase.storage
         .from("images")
-        .upload(fileName, imageData, {
+        .upload(fileName, resizedImage, {
           contentType: "image/png",
           upsert: false,
         });

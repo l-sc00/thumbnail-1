@@ -4,10 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { PricingModal } from "@/components/pricing/pricing-modal";
 
 export const DashboardNavbar = () => {
   const { user, signOut } = useAuth();
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close popover on click outside
@@ -64,7 +66,7 @@ export const DashboardNavbar = () => {
 
           {/* Popover Dropdown */}
           {popoverOpen && (
-            <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden">
+            <div className="absolute right-0 mt-3 w-72 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden">
               {/* User Info */}
               <div className="p-4 border-b border-white/10 flex items-center gap-3">
                 {user?.user_metadata?.avatar_url ? (
@@ -90,6 +92,32 @@ export const DashboardNavbar = () => {
                     {user?.email}
                   </p>
                 </div>
+              </div>
+
+              {/* Upgrade */}
+              <div className="px-4 py-2">
+                <button
+                  onClick={() => {
+                    setPricingModalOpen(true);
+                    setPopoverOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-gray-900 text-sm font-normal transition-colors"
+
+                >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="w-4 h-4"
+                >
+                  <path
+                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                    fill="currentColor"
+                  />
+                </svg>
+                Upgrade
+              </button>
               </div>
 
               {/* Sign Out */}
@@ -121,6 +149,12 @@ export const DashboardNavbar = () => {
           )}
         </div>
       </div>
+
+      {/* Pricing Modal */}
+      <PricingModal
+        isOpen={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+      />
     </nav>
   );
 };
