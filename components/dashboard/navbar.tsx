@@ -10,7 +10,35 @@ export const DashboardNavbar = () => {
   const { user, signOut } = useAuth();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [userPlan, setUserPlan] = useState<string>("free");
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Fetch user plan from Supabase
+  useEffect(() => {
+    const fetchPlan = async () => {
+      if (!user) return;
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("users")
+        .select("plan")
+        .eq("id", user.id)
+        .single();
+      if (data?.plan) setUserPlan(data.plan);
+    };
+    fetchPlan();
+  }, [user]);
+
+  const handleManageSubscription = async () => {
+    try {
+      const res = await fetch("/api/customer-portal", { method: "POST" });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      window.location.href = data.portalUrl;
+    } catch (error) {
+      console.error("Portal error:", error);
+    }
+  };
 
   // Close popover on click outside
   useEffect(() => {
@@ -94,30 +122,56 @@ export const DashboardNavbar = () => {
                 </div>
               </div>
 
-              {/* Upgrade */}
-              <div className="px-4 py-2">
-                <button
-                  onClick={() => {
-                    setPricingModalOpen(true);
-                    setPopoverOpen(false);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-gray-900 text-sm font-normal transition-colors"
-
-                >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="w-4 h-4"
-                >
-                  <path
-                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                    fill="currentColor"
-                  />
-                </svg>
-                Upgrade
-              </button>
+              {/* Upgrade / Manage Subscription */}
+              <div className="px-4 py-2 space-y-2">
+                {userPlan === "free" ? (
+                  <button
+                    onClick={() => {
+                      setPricingModalOpen(true);
+                      setPopoverOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-gray-900 text-sm font-normal transition-colors"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="w-4 h-4"
+                    >
+                      <path
+                        d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    Upgrade
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      handleManageSubscription();
+                      setPopoverOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-normal transition-colors border border-white/10"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="w-4 h-4"
+                    >
+                      <path
+                        d="M12 15V17M6 21H18C19.1046 21 20 20.1046 20 19V13C20 11.8954 19.1046 11 18 11H6C4.89543 11 4 11.8954 4 13V19C4 20.1046 4.89543 21 6 21ZM16 11V7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7V11H16Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Manage Subscription
+                  </button>
+                )}
               </div>
 
               {/* Sign Out */}

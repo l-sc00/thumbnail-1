@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize Polar SDK
     const polar = new Polar({
+      ...(process.env.POLAR_SANDBOX === "true" && { server: "sandbox" }),
       accessToken: process.env.POLAR_ACCESS_TOKEN ?? "",
     });
 
