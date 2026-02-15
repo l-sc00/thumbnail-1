@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/prompt-input";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { LoadingSpinner } from "./loading-spinner";
+import { PricingModal } from "@/components/pricing/pricing-modal";
 
 // SVG Icons
 const ArrowUpIcon = () => (
@@ -64,6 +65,7 @@ export const PromptArea = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [generatedThumbnail, setGeneratedThumbnail] = useState<GeneratedThumbnail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async () => {
@@ -95,6 +97,11 @@ export const PromptArea = () => {
       const data = await response.json();
 
       if (!response.ok) {
+        // Check if it's an insufficient credits error
+        if (response.status === 403 && data.error === "Insufficient credits") {
+          setPricingModalOpen(true);
+          return; // Don't show error, just open pricing modal
+        }
         throw new Error(data.error || "Failed to generate thumbnail");
       }
 
@@ -248,11 +255,11 @@ export const PromptArea = () => {
             className="w-full max-w-2xl"
           >
             <div className="mb-8 text-center">
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-                What thumbnail do you want to create?
+              <h1 className="text-4xl md:text-[44px] font-bold text-white mb-3">
+                어떤 썸네일을 만들고 싶으신가요?
               </h1>
               <p className="text-gray-400 text-lg">
-                Describe your idea and AI will generate it for you
+                아이디어를 설명하시면 AI가 생성해드립니다
               </p>
             </div>
 
@@ -322,6 +329,12 @@ export const PromptArea = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Pricing Modal */}
+      <PricingModal
+        isOpen={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+      />
     </div>
   );
 };

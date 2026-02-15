@@ -10,9 +10,12 @@
 export function enhanceThumbnailPrompt(userInput: string): string {
   const input = (userInput || "").trim();
 
+  // CRITICAL: Start with explicit image generation instruction
+  const imageGenPrefix = "Generate a professional YouTube thumbnail image showing: ";
+
   // Detect content style and characteristics
   const isAnimeStyle = /anime|애니|manga|만화|cartoon|일러스트|illustration|픽셀|pixel|마인크래프트|minecraft|로블록스|roblox/i.test(input);
-  const hasPerson = /person|people|human|face|사람|인물|얼굴|표정|유튜버|아이돌|선수|셀카|내사진|streamer|gamer|creator|host|여자|남자|감정|emotion/i.test(input);
+  const hasPerson = /person|people|human|face|사람|인물|얼굴|표정|유튜버|아이돌|선수|셀카|내사진|streamer|gamer|creator|host|여자|남자|감정|emotion|바이럴/i.test(input);
   const textMatch = input.match(/["'「」『』](.+?)["'」』]/);
   const hasExplicitText = textMatch !== null;
 
@@ -22,7 +25,7 @@ export function enhanceThumbnailPrompt(userInput: string): string {
 
   if (isDetailedPrompt) {
     // User is already using professional language - just add YouTube optimization
-    return `${input}. 16:9 aspect ratio YouTube thumbnail composition. Single clear focal subject with high contrast against background. Ensure the image reads instantly in one second. Professional color grading, crisp sharp focus.`;
+    return `${imageGenPrefix}${input}. 16:9 aspect ratio, 1280x720 pixels. Single clear focal subject with high contrast. Professional color grading, crisp sharp focus.`;
   }
 
   // === CORE STRATEGY: Describe scenes, not keywords ===
@@ -82,15 +85,7 @@ export function enhanceThumbnailPrompt(userInput: string): string {
 
   // ASSEMBLE FINAL PROMPT
   // Using paragraph format rather than keyword lists (Nano Banana principle)
-  const finalPrompt = [
-    sceneDescription,
-    backgroundSpec,
-    textSpec,
-    compositionRules,
-    colorStrategy,
-    technicalSpecs,
-    optimizationNotes
-  ].join(" ");
+  const finalPrompt = `${imageGenPrefix}${sceneDescription} ${backgroundSpec} ${textSpec} ${compositionRules} ${colorStrategy} ${technicalSpecs} ${optimizationNotes}`;
 
   return finalPrompt;
 }

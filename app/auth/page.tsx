@@ -285,20 +285,21 @@ export default function AuthPage() {
 
               {/* Terms */}
               <p className="text-xs text-gray-500 text-center mt-6">
-                By continuing, you agree to our{" "}
+                계속 진행하시면{" "}
                 <Link
-                  href="#"
+                  href="/terms"
                   className="text-cyan-400 hover:text-cyan-300 underline"
                 >
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="#"
-                  className="text-cyan-400 hover:text-cyan-300 underline"
-                >
-                  Privacy Policy
+                  이용약관
                 </Link>
+                {" "}및{" "}
+                <Link
+                  href="/privacy"
+                  className="text-cyan-400 hover:text-cyan-300 underline"
+                >
+                  개인정보 보호정책
+                </Link>
+                에 동의하는 것으로 간주됩니다
               </p>
             </div>
 

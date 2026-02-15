@@ -5,16 +5,56 @@ import { enhanceThumbnailPrompt } from "@/lib/thumbnail-system-prompt";
 import sharp from "sharp";
 
 export async function POST(request: NextRequest) {
+  // Initialize these at top level for error handling
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  let userData: { credits: number } | null = null;
+
   try {
     // Check authentication
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check user credits
+    const { data: userDataTemp, error: userError } = await supabase
+      .from("users")
+      .select("credits")
+      .eq("id", user.id)
+      .single();
+
+    userData = userDataTemp;
+
+    if (userError || !userData) {
+      return NextResponse.json(
+        { error: "Failed to fetch user data" },
+        { status: 500 }
+      );
+    }
+
+    if (userData.credits <= 0) {
+      return NextResponse.json(
+        { error: "Insufficient credits" },
+        { status: 403 }
+      );
+    }
+
+    // Deduct 1 credit immediately
+    const { error: deductError } = await supabase
+      .from("users")
+      .update({ credits: userData.credits - 1 })
+      .eq("id", user.id);
+
+    if (deductError) {
+      return NextResponse.json(
+        { error: "Failed to deduct credits" },
+        { status: 500 }
+      );
     }
 
     // Parse request body
@@ -220,6 +260,12 @@ export async function POST(request: NextRequest) {
         .update({ status: "failed" })
         .eq("id", thumbnail.id);
 
+      // Refund credit on error
+      await supabase
+        .from("users")
+        .update({ credits: userData.credits })
+        .eq("id", user.id);
+
       return NextResponse.json(
         {
           error: "Failed to generate image",
@@ -230,6 +276,15 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("API error:", error);
+
+    // Refund credit on any error if user and userData exist
+    if (user && userData) {
+      await supabase
+        .from("users")
+        .update({ credits: userData.credits })
+        .eq("id", user.id);
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

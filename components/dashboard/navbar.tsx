@@ -11,22 +11,24 @@ export const DashboardNavbar = () => {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const [userPlan, setUserPlan] = useState<string>("free");
+  const [userCredits, setUserCredits] = useState<number>(0);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Fetch user plan from Supabase
+  // Fetch user plan and credits from Supabase
   useEffect(() => {
-    const fetchPlan = async () => {
+    const fetchUserData = async () => {
       if (!user) return;
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const { data } = await supabase
         .from("users")
-        .select("plan")
+        .select("plan, credits")
         .eq("id", user.id)
         .single();
       if (data?.plan) setUserPlan(data.plan);
+      if (data?.credits !== undefined) setUserCredits(data.credits);
     };
-    fetchPlan();
+    fetchUserData();
   }, [user]);
 
   const handleManageSubscription = async () => {
@@ -96,29 +98,55 @@ export const DashboardNavbar = () => {
           {popoverOpen && (
             <div className="absolute right-0 mt-3 w-72 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden">
               {/* User Info */}
-              <div className="p-4 border-b border-white/10 flex items-center gap-3">
-                {user?.user_metadata?.avatar_url ? (
-                  <Image
-                    src={user.user_metadata.avatar_url}
-                    alt="Profile"
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                    <span className="text-cyan-400 text-lg font-semibold">
-                      {user?.email?.charAt(0).toUpperCase()}
+              <div className="p-4 border-b border-white/10">
+                <div className="flex items-center gap-3 mb-3">
+                  {user?.user_metadata?.avatar_url ? (
+                    <Image
+                      src={user.user_metadata.avatar_url}
+                      alt="Profile"
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                      <span className="text-cyan-400 text-lg font-semibold">
+                        {user?.email?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {user?.user_metadata?.full_name || "User"}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {user?.email}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Plan & Credits */}
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-white uppercase">
+                      {userPlan}
                     </span>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {user?.user_metadata?.full_name || "User"}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {user?.email}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-yellow-400"
+                    >
+                      <circle cx="12" cy="12" r="10" fill="currentColor" />
+                    </svg>
+                    <span className="text-sm font-semibold text-white">
+                      {userCredits}
+                    </span>
+                    <span className="text-xs text-gray-400">credits</span>
+                  </div>
                 </div>
               </div>
 
