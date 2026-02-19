@@ -72,7 +72,7 @@ export const PremiumHero = () => {
 
           <Link href={user ? "/dashboard" : "/auth"}>
             <Button size="lg" className="gap-4 bg-black hover:bg-gray-900 text-white font-semibold text-lg px-8 py-6">
-              {user ? "Dashboard" : "무료로 시작하기"} <ArrowRight />
+              {user ? "Dashboard" : "시작하기"} <ArrowRight />
             </Button>
           </Link>
         </div>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { PricingModal } from "@/components/pricing/pricing-modal";
 
 // SVG Arrow Icon
 const ArrowRight = () => (
@@ -66,29 +67,53 @@ const CloseIcon = () => (
   </svg>
 );
 
-// Logout Icon
-const LogoutIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-4 h-4"
-  >
-    <path
-      d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [userPlan, setUserPlan] = useState<string>("free");
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const { user, loading, signOut } = useAuth();
+
+  // Fetch user plan and credits from Supabase
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) return;
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("users")
+        .select("plan, credits")
+        .eq("id", user.id)
+        .single();
+      if (data?.plan) setUserPlan(data.plan);
+      if (data?.credits !== undefined) setUserCredits(data.credits);
+    };
+    fetchUserData();
+  }, [user]);
+
+  // Close popover on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setPopoverOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleManageSubscription = async () => {
+    try {
+      const res = await fetch("/api/customer-portal", { method: "POST" });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      window.location.href = data.portalUrl;
+    } catch (error) {
+      console.error("Portal error:", error);
+    }
+  };
 
   const navLinks = [
     { href: "#features", label: "Features" },
@@ -125,17 +150,16 @@ export const Navbar = () => {
             ))}
           </div>
 
-          {/* Right Button - Desktop */}
+          {/* Right Area - Desktop */}
           <div className="hidden md:flex items-center gap-3">
             {loading ? null : user ? (
-              <>
-                <Link href="/dashboard">
-                  <Button size="sm" className="gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
-                    Dashboard <ArrowRight />
-                  </Button>
-                </Link>
-                <div className="flex items-center gap-2">
-                  {user.user_metadata?.avatar_url && (
+              /* Profile Popover */
+              <div className="relative" ref={popoverRef}>
+                <button
+                  onClick={() => setPopoverOpen(!popoverOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all shadow-lg"
+                >
+                  {user.user_metadata?.avatar_url ? (
                     <Image
                       src={user.user_metadata.avatar_url}
                       alt="Profile"
@@ -143,17 +167,101 @@ export const Navbar = () => {
                       height={28}
                       className="w-7 h-7 rounded-full"
                     />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                      <span className="text-cyan-400 text-sm font-semibold">
+                        {user.email?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   )}
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-2 border-white/20 text-gray-300 hover:text-white hover:bg-white/10"
-                  onClick={signOut}
-                >
-                  로그아웃 <LogoutIcon />
-                </Button>
-              </>
+                </button>
+
+                {/* Popover Dropdown */}
+                {popoverOpen && (
+                  <div className="absolute right-0 mt-3 w-72 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden">
+                    {/* User Info */}
+                    <div className="p-4 border-b border-white/10">
+                      <div className="flex items-center gap-3 mb-3">
+                        {user.user_metadata?.avatar_url ? (
+                          <Image
+                            src={user.user_metadata.avatar_url}
+                            alt="Profile"
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                            <span className="text-cyan-400 text-lg font-semibold">
+                              {user.email?.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {user.user_metadata?.full_name || "User"}
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Plan & Credits */}
+                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-white uppercase">
+                            {userPlan}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-yellow-400">
+                            <circle cx="12" cy="12" r="10" fill="currentColor" />
+                          </svg>
+                          <span className="text-sm font-semibold text-white">{userCredits}</span>
+                          <span className="text-xs text-gray-400">credits</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upgrade / Manage Subscription */}
+                    <div className="px-4 py-2 space-y-2">
+                      {userPlan === "free" ? (
+                        <button
+                          onClick={() => { setPricingModalOpen(true); setPopoverOpen(false); }}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-gray-900 text-sm font-normal transition-colors"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="w-4 h-4">
+                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor" />
+                          </svg>
+                          Upgrade
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { handleManageSubscription(); setPopoverOpen(false); }}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-normal transition-colors border border-white/10"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="w-4 h-4">
+                            <path d="M12 15V17M6 21H18C19.1046 21 20 20.1046 20 19V13C20 11.8954 19.1046 11 18 11H6C4.89543 11 4 11.8954 4 13V19C4 20.1046 4.89543 21 6 21ZM16 11V7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7V11H16Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Manage Subscription
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Sign Out */}
+                    <button
+                      onClick={() => { signOut(); setPopoverOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-red-400 transition-colors"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="w-4 h-4">
+                        <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link href="/auth">
                 <Button size="sm" className="gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
@@ -200,7 +308,7 @@ export const Navbar = () => {
                     className="gap-2 w-full border-white/20 text-gray-300 hover:text-white hover:bg-white/10"
                     onClick={() => { signOut(); setMobileMenuOpen(false); }}
                   >
-                    로그아웃 <LogoutIcon />
+                    Sign Out
                   </Button>
                 </>
               ) : (
@@ -214,6 +322,12 @@ export const Navbar = () => {
           </div>
         )}
       </div>
+
+      {/* Pricing Modal */}
+      <PricingModal
+        isOpen={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+      />
     </nav>
   );
 };

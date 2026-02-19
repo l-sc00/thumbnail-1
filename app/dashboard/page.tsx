@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const noiseRef = useRef<HTMLCanvasElement>(null);
   const beamsRef = useRef<Beam[]>([]);
   const animationFrameRef = useRef<number>(0);
+  const frameCountRef = useRef<number>(0);
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -54,18 +55,18 @@ export default function DashboardPage() {
   }, [user, loading, router]);
 
   const LAYERS = 3;
-  const BEAMS_PER_LAYER = 8;
+  const BEAMS_PER_LAYER = 6;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const noiseCanvas = noiseRef.current;
     if (!canvas || !noiseCanvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false });
     const nCtx = noiseCanvas.getContext("2d");
     if (!ctx || !nCtx) return;
 
     const resizeCanvas = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
       canvas.style.width = `${window.innerWidth}px`;
@@ -124,6 +125,7 @@ export default function DashboardPage() {
 
     const animate = () => {
       if (!canvas || !ctx) return;
+      frameCountRef.current += 1;
 
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
       gradient.addColorStop(0, "#050505");
@@ -141,7 +143,9 @@ export default function DashboardPage() {
         drawBeam(beam);
       });
 
-      generateNoise();
+      if (frameCountRef.current % 3 === 0) {
+        generateNoise();
+      }
       animationFrameRef.current = requestAnimationFrame(animate);
     };
     animate();
