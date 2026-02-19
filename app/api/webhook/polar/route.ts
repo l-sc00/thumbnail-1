@@ -52,6 +52,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify webhook signature
+    console.log("[Polar Webhook] Headers received:", {
+      "webhook-id": headers["webhook-id"],
+      "webhook-timestamp": headers["webhook-timestamp"],
+      "webhook-signature": headers["webhook-signature"]?.substring(0, 20) + "...",
+      secretLength: process.env.POLAR_WEBHOOK_SECRET?.length,
+      secretPrefix: process.env.POLAR_WEBHOOK_SECRET?.substring(0, 10),
+    });
+
     const event = validateEvent(
       body,
       headers,
