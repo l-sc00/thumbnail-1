@@ -108,6 +108,11 @@ export const PromptArea = () => {
       setGeneratedThumbnail(data.thumbnail);
       setInput("");
       setFiles([]);
+
+      // 사이드바에 즉시 반영
+      window.dispatchEvent(
+        new CustomEvent("thumbnail-created", { detail: data.thumbnail })
+      );
     } catch (err) {
       console.error("Generation error:", err);
       setError(err instanceof Error ? err.message : "Failed to generate thumbnail");

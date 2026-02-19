@@ -45,10 +45,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create checkout session
+    const successUrl = `${request.nextUrl.origin}/dashboard`;
     console.log("Creating Polar checkout with product ID:", productId);
     const checkout = await polar.checkouts.create({
       products: [productId],
       externalCustomerId: user.id, // Link to your Supabase user ID
+      successUrl,
     });
 
     console.log("Checkout created successfully:", checkout.id);

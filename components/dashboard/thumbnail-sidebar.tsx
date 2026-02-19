@@ -39,6 +39,24 @@ export const ThumbnailSidebar = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
+    // 새 썸네일 생성 이벤트 수신
+    const handleNewThumbnail = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const newThumbnail: Thumbnail = {
+        id: detail.id,
+        prompt: detail.prompt,
+        image_url: detail.imageUrl,
+        status: "completed",
+        created_at: new Date().toISOString(),
+      };
+      setThumbnails((prev) => [newThumbnail, ...prev]);
+    };
+
+    window.addEventListener("thumbnail-created", handleNewThumbnail);
+    return () => window.removeEventListener("thumbnail-created", handleNewThumbnail);
+  }, []);
+
+  useEffect(() => {
     fetchThumbnails();
 
     // Set up real-time subscription for current user's thumbnails
